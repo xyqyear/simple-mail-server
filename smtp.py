@@ -237,7 +237,9 @@ class SMTPServerThread(threading.Thread):
         self._process_command(self._quit)
 
         if self.rcpt_to == self.server.address:
+            db.aquire()
             db.insert_message(self.mail_content)
+            db.release()
         else:
             client = SMTPSender(self.server.address, self.rcpt_to)
             client.connect()
