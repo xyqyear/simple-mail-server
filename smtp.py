@@ -229,12 +229,9 @@ class SMTPServerThread(threading.Thread):
 
     def run(self):
         self._send_response(f'220 {self.server.domain} Demo SMTP Server\r\n')
-        self._process_command(self._helo)
-        self._process_command(self._mail_from)
-        self._process_command(self._rcpt_to)
-        self._process_command(self._data)
-        self._process_command(self._actual_data)
-        self._process_command(self._quit)
+        for func in (self._helo, self._mail_from, self._rcpt_to, self._data,
+                     self._actual_data, self._quit):
+            self._process_command(func)
 
         if self.rcpt_to == self.server.address:
             db.aquire()
