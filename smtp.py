@@ -14,10 +14,10 @@ class SMTPResponse:
         self.code = code
         self.success = 200 <= code < 300 or code == 354
 
-    @staticmethod
-    def from_str(raw_response: str) -> 'SMTPResponse':
-        return SMTPResponse(raw_response, int(raw_response[:3]),
-                            raw_response[3:].strip())
+    @classmethod
+    def from_str(cls, raw_response: str) -> 'SMTPResponse':
+        return cls(raw_response, int(raw_response[:3]),
+                   raw_response[3:].strip())
 
     def to_str(self) -> str:
         return self.raw_response
@@ -36,12 +36,11 @@ class SMTPCommand:
             self.to_address = re.search(r'<(.*)>', self.argument).group(1)
             self.to_username, self.to_domain = self.to_address.split('@')
 
-    @staticmethod
-    def from_str(raw_command: str) -> 'SMTPCommand':
-        split_result = raw_command.split(' ')
-        return SMTPCommand(
-            raw_command, split_result[0].strip(),
-            split_result[1].strip() if len(split_result) > 1 else '')
+    @classmethod
+    def from_str(cls, raw_command: str) -> 'SMTPCommand':
+        split_result = raw_command.split(' ', 1)
+        return cls(raw_command, split_result[0].strip(),
+                   split_result[1].strip() if len(split_result) > 1 else '')
 
     def to_str(self) -> str:
         return self.raw_command
