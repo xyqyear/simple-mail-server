@@ -5,6 +5,7 @@ import config
 import re
 
 from utils import get_mx, recv_response
+from mailbox import db
 
 
 class SMTPResponse:
@@ -236,7 +237,7 @@ class SMTPServerThread(threading.Thread):
         self._process_command(self._quit)
 
         if self.rcpt_to == self.server.address:
-            print(self.mail_content)
+            db.insert_message(self.mail_content)
         else:
             client = SMTPSender(self.server.address, self.rcpt_to)
             client.connect()
