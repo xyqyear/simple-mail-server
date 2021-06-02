@@ -55,11 +55,14 @@ class SMTPSender:
         self._socket.settimeout(10)
 
     def _send_command(self, command: str):
-        logging.info(f'sending command: {command}')
         self._socket.sendall(command.encode())
+        logging.info(
+            f'SMTPSender sent from {self._mail_from} to {self._rcpt_to}: {command}'
+        )
 
     def _recv_response(self, ends_with: str = '\r\n') -> SMTPResponse:
         data = recv_response(self._socket, ends_with)
+        logging.info(f'SMTPSender received data from {self._rcpt_to}: {data}')
         if data:
             return SMTPResponse.from_str(data)
         else:
@@ -135,7 +138,8 @@ class SMTPServer:
         s.bind(('0.0.0.0', 25))
         s.listen()
         while True:
-            conn, _ = s.accept()
+            conn, address = s.accept()
+            logging.info(f'SMTPServer accepted new connection from {address}')
             thread = SMTPServerThread(conn, self)
             thread.run()
 
@@ -157,9 +161,15 @@ class SMTPServerThread(threading.Thread):
 
     def _send_response(self, content: str):
         self._connection.sendall(content.encode())
+        logging.info(
+            f'SMTPServerThread sent response to {self._connection.getpeername()}: {content}'
+        )
 
     def _recv_command(self, ends_with='\r\n') -> SMTPCommand:
         raw_command = recv_response(self._connection, ends_with)
+        logging.info(
+            f'SMTPServerThread received command from {self._connection.getpeername()}: {raw_command}'
+        )
         return SMTPCommand.from_str(raw_command)
 
     def _process_command(self, func):

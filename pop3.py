@@ -1,4 +1,5 @@
 import threading
+import logging
 import socket
 
 from enum import Enum
@@ -41,7 +42,8 @@ class POP3Server:
         s.bind(('0.0.0.0', 110))
         s.listen()
         while True:
-            conn, _ = s.accept()
+            conn, address = s.accept()
+            logging.info(f'POP3Server accepted new connection from {address}')
             thread = POP3ServerThread(conn, self)
             thread.run()
 
@@ -90,6 +92,9 @@ class POP3ServerThread(threading.Thread):
 
     def _recv_command(self) -> POP3Command:
         data = recv_response(self._connection)
+        logging.info(
+            f'POP3ServerThread received command from {self._connection.getpeername()}: {data}'
+        )
         return POP3Command.from_str(data)
 
     def _quit(self, args: Tuple[str]) -> Union[bool, None]:
@@ -167,9 +172,11 @@ class POP3ServerThread(threading.Thread):
         self._send_ok()
 
     def _send_response(self, success: bool, message: str = ''):
-        self._connection.sendall(
-            f'{"+OK" if success else "-ERR"}{" " + message if message else ""}\r\n'
-            .encode())
+        response = f'{"+OK" if success else "-ERR"}{" " + message if message else ""}\r\n'
+        self._connection.sendall(response.encode())
+        logging.info(
+            f'SMTPServerThread sent response to {self._connection.getpeername()}: {response}'
+        )
 
     def _send_ok(self, message: str = ''):
         self._send_response(True, message)
