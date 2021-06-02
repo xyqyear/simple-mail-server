@@ -195,7 +195,7 @@ class POP3ServerThread(threading.Thread):
             else:
                 response += '\r\n'.join(message.split('\r\n')[:line_num])
 
-            response += '.'
+            response += '\r\n.'
             self._send_ok(response)
 
         else:
