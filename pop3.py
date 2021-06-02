@@ -41,6 +41,7 @@ class POP3Server:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(('0.0.0.0', 110))
         s.listen()
+        logging(f'POP3Server is now running')
         while True:
             conn, address = s.accept()
             logging.info(f'POP3Server accepted new connection from {address}')
@@ -192,4 +193,7 @@ class POP3ServerThread(threading.Thread):
         while not self._dispatch(command):
             command = self._recv_command()
 
+        logging.info(
+            f'POP3ServerThread closing connetion with {self._connection.getpeername}'
+        )
         self._connection.close()
