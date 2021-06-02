@@ -70,7 +70,6 @@ class POP3ServerThread(threading.Thread):
             'NOOP': self._noop,
             'RSET': self._rset,
             'TOP': self._top,
-            'UIDL': self._uidl,
         }
 
         self._command_state = {
@@ -84,7 +83,6 @@ class POP3ServerThread(threading.Thread):
             'NOOP': (POP3State.TRANSACTION, ),
             'RSET': (POP3State.TRANSACTION, ),
             'TOP': (POP3State.TRANSACTION, ),
-            'UIDL': (POP3State.TRANSACTION, ),
         }
 
         self._got_username = False
@@ -200,9 +198,6 @@ class POP3ServerThread(threading.Thread):
 
         else:
             self._send_err()
-
-    def _uidl(self, args: Tuple[str]) -> Union[bool, None]:
-        self._send_err()
 
     def _send_response(self, success: bool, message: str = ''):
         response = f'{"+OK" if success else "-ERR"}{" " + message if message else ""}\r\n'

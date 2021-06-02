@@ -57,27 +57,6 @@ class MailboxDB:
     def get_message_length_with_id(self, msg_id: int) -> int:
         return len(self.get_message_with_id(msg_id))
 
-    def get_message_uid_list(self) -> Tuple[Tuple[int]]:
-        return tuple(
-            map(
-                lambda i: i[:2],
-                filter(
-                    lambda i: not i[2],
-                    self._db_query(
-                        "select row_number() over (order by recv_date desc) as row_num, id, del from message"
-                    ))))
-
-    def get_message_uid_with_id(self, msg_id: int) -> str:
-        query_result = self._db_query(
-            "select id, del from (select row_number() over (order by recv_date desc) as row_num, id, del from message) where row_num=?",
-            [msg_id])
-        if query_result:
-            if query_result[0][1]:
-                raise Exception("this message was deleted")
-            return query_result[0][0]
-        else:
-            raise Exception("no such message")
-
     def delete_message_with_id(self, msg_id: int):
         # check if the msg exists
         self.get_message_with_id(msg_id)
