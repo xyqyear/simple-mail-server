@@ -228,6 +228,9 @@ class SMTPServerThread(threading.Thread):
 
     def _actual_data(self) -> bool:
         data = recv_response(self._connection, '\r\n.\r\n')
+        logging.info(
+            f'SMTPServerThread received data from {self._connection.getpeername()}: {data}'
+        )
         self._send_response(OK_MESSAGE)
         self._mail_content = data
         return True
