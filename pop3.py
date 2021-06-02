@@ -4,13 +4,12 @@ import socket
 from enum import Enum
 from mailbox import db
 from utils import recv_response
-from typing import Tuple
+from typing import Tuple, Union
 
 
 class POP3State(Enum):
     AUTHORIZATION = 1
     TRANSACTION = 2
-    UPDATE = 3
 
 
 class POP3Command:
@@ -69,8 +68,7 @@ class POP3ServerThread(threading.Thread):
         }
 
         self._command_state = {
-            'QUIT':
-            (POP3State.AUTHORIZATION, POP3State.TRANSACTION, POP3State.UPDATE),
+            'QUIT': (POP3State.AUTHORIZATION, POP3State.TRANSACTION),
             'USER': (POP3State.AUTHORIZATION),
             'PASS': (POP3State.AUTHORIZATION),
             'STAT': (POP3State.TRANSACTION),
@@ -83,46 +81,47 @@ class POP3ServerThread(threading.Thread):
 
         self._username = ''
 
-    def _dispatch(self, command: POP3Command) -> bool:
-        """
-        return value is to determin if terminate the loop or not.
-        """
+    def _dispatch(self, command: POP3Command) -> Union(bool, None):
         if command.command in self._dispatcher and \
            self._state in self._command_state[command.command]:
             return self._dispatcher[command.command](command.args)
         else:
             self._send_err()
-            return False
 
     def _recv_command(self) -> POP3Command:
         data = recv_response(self._connection)
         return POP3Command.from_str(data)
 
-    def _quit(self, args: Tuple[int]) -> bool:
+    def _quit(self, args: Tuple[int]) -> Union(bool, None):
+        if self._state == POP3State.AUTHORIZATION:
+            self._send_ok()
+        else:
+            self._send_ok()
+            db.release()
+            return True
+
+    def _user(self, args: Tuple[int]) -> Union(bool, None):
         pass
 
-    def _user(self, args: Tuple[int]) -> bool:
+    def _pass(self, args: Tuple[int]) -> Union(bool, None):
         pass
 
-    def _pass(self, args: Tuple[int]) -> bool:
+    def _stat(self, args: Tuple[int]) -> Union(bool, None):
         pass
 
-    def _stat(self, args: Tuple[int]) -> bool:
+    def _list(self, args: Tuple[int]) -> Union(bool, None):
         pass
 
-    def _list(self, args: Tuple[int]) -> bool:
+    def _retr(self, args: Tuple[int]) -> Union(bool, None):
         pass
 
-    def _retr(self, args: Tuple[int]) -> bool:
+    def _dele(self, args: Tuple[int]) -> Union(bool, None):
         pass
 
-    def _dele(self, args: Tuple[int]) -> bool:
+    def _noop(self, args: Tuple[int]) -> Union(bool, None):
         pass
 
-    def _noop(self, args: Tuple[int]) -> bool:
-        pass
-
-    def _rset(self, args: Tuple[int]) -> bool:
+    def _rset(self, args: Tuple[int]) -> Union(bool, None):
         pass
 
     def _send_response(self, success: bool, message: str = ''):
@@ -138,6 +137,6 @@ class POP3ServerThread(threading.Thread):
 
     def run(self):
         command = self._recv_command()
-        while self._dispatch(command):
+        # if the dispatcher return True, terminate the loop.
+        while not self._dispatch(command):
             command = self._recv_command()
-        db.release()
