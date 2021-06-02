@@ -202,10 +202,10 @@ class SMTPServerThread(threading.Thread):
     def _auth(self):
         # Username:
         self._send_response(f'334 VXNlcm5hbWU6')
-        username_base64 = self._recv_response(self._connection)
+        username_base64 = self._recv_response()
         # Password:
         self._send_response(f'334 UGFzc3dvcmQ6')
-        password_base64 = self._recv_response(self._connection)
+        password_base64 = self._recv_response()
 
         if base64.b64encode(self._server.address.encode()).decode() == username_base64 and \
            base64.b64encode(self._server.password.encode()).decode() == password_base64:
