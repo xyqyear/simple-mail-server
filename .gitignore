@@ -4,3 +4,4 @@ smtp_server_test.py
 smtp_test.py
 .vscode/
 __pycache__/
+*.sqlite3
