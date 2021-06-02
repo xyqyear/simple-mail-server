@@ -124,3 +124,4 @@ class POP3ServerThread(threading.Thread):
         command = self._recv_command()
         while self._dispatch(command):
             command = self._recv_command()
+        db.release()
