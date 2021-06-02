@@ -48,18 +48,18 @@ class SMTPCommand:
 
 class SMTPSender:
     def __init__(self, mail_from: str, rcpt_to: str):
-        self.mail_from = mail_from
-        self.rcpt_to = rcpt_to
+        self._mail_from = mail_from
+        self._rcpt_to = rcpt_to
 
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.settimeout(10)
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket.settimeout(10)
 
     def _send_command(self, command: str):
         logging.info(f'sending command: {command}')
-        self.socket.sendall(command.encode())
+        self._socket.sendall(command.encode())
 
     def _recv_response(self, ends_with: str = '\r\n') -> SMTPResponse:
-        data = recv_response(self.socket, ends_with)
+        data = recv_response(self._socket, ends_with)
         if data:
             return SMTPResponse.from_str(data)
         else:
@@ -75,18 +75,18 @@ class SMTPSender:
             raise Exception(f'{raise_message}: {response.raw_response}')
 
     def connect(self):
-        domain = self.mail_from.split('@')[1]
+        domain = self._mail_from.split('@')[1]
 
         # resolve destination mailbox mx record
-        hostname = self.rcpt_to.split('@')[1]
+        hostname = self._rcpt_to.split('@')[1]
         if re.match(r'^\[\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\]$', hostname):
-            self.socket.connect((hostname[1:][:-1], 25))
+            self._socket.connect((hostname[1:][:-1], 25))
             logging.log(0, f'connecting to {hostname}')
         else:
             hostname = get_mx(hostname)
             if not hostname:
                 raise Exception('MX Record not found.')
-            self.socket.connect((hostname, 25))
+            self._socket.connect((hostname, 25))
             logging.log(0, f'connecting to {hostname}')
 
         # receive initial server message
@@ -119,8 +119,8 @@ class SMTPSender:
     def close(self):
         # QUIT
         self._send_command("QUIT\r\n")
-        recv_response(self.socket)
-        self.socket.close()
+        recv_response(self._socket)
+        self._socket.close()
 
 
 class SMTPServer:
@@ -148,18 +148,18 @@ OK_MESSAGE = "250 OK.\r\n"
 class SMTPServerThread(threading.Thread):
     def __init__(self, connection: socket.socket, server: SMTPServer):
         super().__init__()
-        self.connection = connection
-        self.server = server
+        self._connection = connection
+        self._server = server
 
-        self.rcpt_to: str
-        self.relay: bool
-        self.mail_content: str
+        self._rcpt_to: str
+        self._relay: bool
+        self._mail_content: str
 
     def _send_response(self, content: str):
-        self.connection.sendall(content.encode())
+        self._connection.sendall(content.encode())
 
     def _recv_command(self, ends_with='\r\n') -> SMTPCommand:
-        raw_command = recv_response(self.connection, ends_with)
+        raw_command = recv_response(self._connection, ends_with)
         return SMTPCommand.from_str(raw_command)
 
     def _process_command(self, func):
@@ -195,7 +195,7 @@ class SMTPServerThread(threading.Thread):
         c = self._recv_command()
 
         if c.command == 'RCPT':
-            self.rcpt_to = c.to_address
+            self._rcpt_to = c.to_address
             self._send_response(OK_MESSAGE)
             return True
         else:
@@ -212,9 +212,9 @@ class SMTPServerThread(threading.Thread):
             return False
 
     def _actual_data(self) -> bool:
-        data = recv_response(self.connection, '\r\n.\r\n')
+        data = recv_response(self._connection, '\r\n.\r\n')
         self._send_response(OK_MESSAGE)
-        self.mail_content = data
+        self._mail_content = data
         return True
 
     def _quit(self) -> bool:
@@ -227,17 +227,17 @@ class SMTPServerThread(threading.Thread):
             return False
 
     def run(self):
-        self._send_response(f'220 {self.server.domain} Demo SMTP Server\r\n')
+        self._send_response(f'220 {self._server.domain} Demo SMTP Server\r\n')
         for func in (self._helo, self._mail_from, self._rcpt_to, self._data,
                      self._actual_data, self._quit):
             self._process_command(func)
 
-        if self.rcpt_to == self.server.address:
+        if self._rcpt_to == self._server.address:
             db.aquire()
-            db.insert_message(self.mail_content)
+            db.insert_message(self._mail_content)
             db.release()
         else:
-            client = SMTPSender(self.server.address, self.rcpt_to)
+            client = SMTPSender(self._server.address, self._rcpt_to)
             client.connect()
-            client.send(self.mail_content)
+            client.send(self._mail_content)
             client.close()
