@@ -93,12 +93,9 @@ class POP3ServerThread(threading.Thread):
         return POP3Command.from_str(data)
 
     def _quit(self, args: Tuple[str]) -> Union[bool, None]:
-        if self._state == POP3State.AUTHORIZATION:
-            self._send_ok()
-        else:
-            self._send_ok()
-            db.release()
-            return True
+        self._send_ok()
+        db.release()
+        return True
 
     def _user(self, args: Tuple[str]) -> Union[bool, None]:
         if len(args) != 1:
@@ -187,3 +184,5 @@ class POP3ServerThread(threading.Thread):
         # if the dispatcher return True, terminate the loop
         while not self._dispatch(command):
             command = self._recv_command()
+
+        self._connection.close()

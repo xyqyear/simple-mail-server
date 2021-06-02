@@ -241,3 +241,5 @@ class SMTPServerThread(threading.Thread):
             client.connect()
             client.send(self._mail_content)
             client.close()
+
+        self._connection.close()
