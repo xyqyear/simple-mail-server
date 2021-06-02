@@ -131,6 +131,7 @@ class POP3ServerThread(threading.Thread):
             response += '.'
 
             self._send_ok(response)
+
         elif len(args) == 1:
             try:
                 message_length = db.get_message_length_with_id(int(args[0]))
@@ -138,17 +139,35 @@ class POP3ServerThread(threading.Thread):
             except Exception as e:
                 self._send_err(str(e))
 
+        else:
+            self._send_err()
+
     def _retr(self, args: Tuple[str]) -> Union(bool, None):
-        pass
+        if len(args) == 1:
+            try:
+                message = db.get_message_with_id(int(args[0]))
+                self._send_ok(f'{len(message)} octets\r\n{message}\r\n.')
+            except Exception as e:
+                self._send_err(str(e))
+        else:
+            self._send_err()
 
     def _dele(self, args: Tuple[str]) -> Union(bool, None):
-        pass
+        if len(args) == 1:
+            try:
+                db.delete_message_with_id(int(args[0]))
+                self._send_ok()
+            except Exception as e:
+                self._send_err(str(e))
+        else:
+            self._send_err()
 
     def _noop(self, args: Tuple[str]) -> Union(bool, None):
-        pass
+        self._send_ok()
 
     def _rset(self, args: Tuple[str]) -> Union(bool, None):
-        pass
+        db.reset_messages()
+        self._send_ok()
 
     def _send_response(self, success: bool, message: str = ''):
         self._connection.sendall(
