@@ -277,10 +277,14 @@ class SMTPServerThread(threading.Thread):
     def _exit(self):
         if self._mail_content:
             if self._as_submission_server:
-                client = SMTPSender(self._server.address, self._rcpt_to)
-                client.connect()
-                client.send(self._mail_content)
-                client.close()
+                try:
+                    client = SMTPSender(self._server.address, self._rcpt_to)
+                    client.connect()
+                    client.send(self._mail_content)
+                    client.close()
+                except Exception as e:
+                    logging.error(
+                        f'failed sending mail to {self._rcpt_to}: {e}')
             else:
                 db.aquire()
                 db.insert_message(self._mail_content)
