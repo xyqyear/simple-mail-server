@@ -68,11 +68,27 @@ class POP3ServerThread(threading.Thread):
             'RSET': self._rset
         }
 
+        self._command_state = {
+            'QUIT':
+            (POP3State.AUTHORIZATION, POP3State.TRANSACTION, POP3State.UPDATE),
+            'USER': (POP3State.AUTHORIZATION),
+            'PASS': (POP3State.AUTHORIZATION),
+            'STAT': (POP3State.TRANSACTION),
+            'LIST': (POP3State.TRANSACTION),
+            'RETR': (POP3State.TRANSACTION),
+            'DELE': (POP3State.TRANSACTION),
+            'NOOP': (POP3State.TRANSACTION),
+            'RSET': (POP3State.TRANSACTION),
+        }
+
+        self._username = ''
+
     def _dispatch(self, command: POP3Command) -> bool:
         """
         return value is to determin if terminate the loop or not.
         """
-        if command.command in self._dispatcher:
+        if command.command in self._dispatcher and \
+           self._state in self._command_state[command.command]:
             return self._dispatcher[command.command](command.args)
         else:
             self._send_err()
