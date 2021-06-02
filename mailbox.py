@@ -7,7 +7,7 @@ from typing import Tuple
 
 class MailboxDB:
     def __init__(self, db_path='mailbox.sqlite3'):
-        self.db = sqlite3.connect(db_path)
+        self.db = sqlite3.connect(db_path, check_same_thread=False)
         self.lock = threading.Lock()
 
         if not self._db_query(
@@ -24,10 +24,11 @@ class MailboxDB:
         self.db.commit()
 
     def get_stat(self) -> Tuple[int]:
-        raw_count = self._db_query("select count(*) from message")
+        raw_count = self._db_query("select count(*) from message where del=0")
         if raw_count[0][0]:
             return (raw_count[0][0],
-                    self._db_query("select sum(length(content)) from message")
+                    self._db_query(
+                        "select sum(length(content)) from message where del=0")
                     [0][0])
         else:
             return (0, 0)

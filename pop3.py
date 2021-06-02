@@ -1,6 +1,7 @@
 import threading
 import logging
 import socket
+import sys
 
 from enum import Enum
 from mailbox import db
@@ -46,7 +47,7 @@ class POP3Server:
             conn, address = s.accept()
             logging.info(f'POP3Server accepted new connection from {address}')
             thread = POP3ServerThread(conn, self)
-            thread.run()
+            thread.start()
 
 
 class POP3ServerThread(threading.Thread):
@@ -56,7 +57,7 @@ class POP3ServerThread(threading.Thread):
         self._server = server
         self._state = POP3State.AUTHORIZATION
 
-        db.aquire()
+        self._connection.settimeout(30)
 
         self._dispatcher = {
             'QUIT': self._quit,
@@ -93,6 +94,8 @@ class POP3ServerThread(threading.Thread):
 
     def _recv_command(self) -> POP3Command:
         data = recv_response(self._connection)
+        if not data:
+            self._exit()
         logging.info(
             f'POP3ServerThread received command from {self._connection.getpeername()}: {data}'
         )
@@ -100,7 +103,6 @@ class POP3ServerThread(threading.Thread):
 
     def _quit(self, args: Tuple[str]) -> Union[bool, None]:
         self._send_ok()
-        db.release()
         return True
 
     def _user(self, args: Tuple[str]) -> Union[bool, None]:
@@ -118,6 +120,7 @@ class POP3ServerThread(threading.Thread):
             self._send_ok()
             # ! where the state changes
             self._state = POP3State.TRANSACTION
+            db.aquire()
         else:
             self._send_err()
 
@@ -129,8 +132,8 @@ class POP3ServerThread(threading.Thread):
         if len(args) == 0:
             message_length_list = db.get_message_length_list()
             response = f'{len(message_length_list)} messages\r\n'
-            for i, length in enumerate(message_length_list):
-                response += f'{i+1} {length} \r\n'
+            for i, length in message_length_list:
+                response += f'{i} {length}\r\n'
             response += '.'
 
             self._send_ok(response)
@@ -185,6 +188,15 @@ class POP3ServerThread(threading.Thread):
     def _send_err(self, message: str = ''):
         self._send_response(False, message)
 
+    def _exit(self):
+        if self._state == POP3State.TRANSACTION:
+            db.release()
+        logging.info(
+            f'POP3ServerThread closing connetion with {self._connection.getpeername()}'
+        )
+        self._connection.close()
+        sys.exit()
+
     def run(self):
         # greeting
         self._send_ok()
@@ -193,7 +205,4 @@ class POP3ServerThread(threading.Thread):
         while not self._dispatch(command):
             command = self._recv_command()
 
-        logging.info(
-            f'POP3ServerThread closing connetion with {self._connection.getpeername()}'
-        )
-        self._connection.close()
+        self._exit()

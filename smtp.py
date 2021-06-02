@@ -1,7 +1,7 @@
 import threading
 import logging
 import socket
-import config
+import sys
 import re
 
 from utils import get_mx, recv_response
@@ -52,7 +52,7 @@ class SMTPSender:
         self._rcpt_to = rcpt_to
 
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._socket.settimeout(10)
+        self._socket.settimeout(30)
 
     def _send_command(self, command: str):
         self._socket.sendall(command.encode())
@@ -100,11 +100,11 @@ class SMTPSender:
         self._check_response('Failed while greeting.')
 
         # MAIL FROM
-        self._send_command(f'MAIL FROM:<{self.mail_from}>\r\n')
+        self._send_command(f'MAIL FROM:<{self._mail_from}>\r\n')
         self._check_response('Failed while stating source mailbox.')
 
         # RCPT TO
-        self._send_command(f'RCPT TO:<{self.rcpt_to}>\r\n')
+        self._send_command(f'RCPT TO:<{self._rcpt_to}>\r\n')
         self._check_response('Failed while stating destination mailbox.')
 
     def send(self, content: str):
@@ -142,7 +142,7 @@ class SMTPServer:
             conn, address = s.accept()
             logging.info(f'SMTPServer accepted new connection from {address}')
             thread = SMTPServerThread(conn, self)
-            thread.run()
+            thread.start()
 
 
 INVALID_COMMAND_MESSAGE = "550 Invalid command in current state.\r\n"
@@ -160,6 +160,8 @@ class SMTPServerThread(threading.Thread):
         self._relay: bool
         self._mail_content: str
 
+        self._connection.settimeout(30)
+
     def _send_response(self, content: str):
         self._connection.sendall(content.encode())
         logging.info(
@@ -168,6 +170,8 @@ class SMTPServerThread(threading.Thread):
 
     def _recv_command(self, ends_with='\r\n') -> SMTPCommand:
         raw_command = recv_response(self._connection, ends_with)
+        if not raw_command:
+            self._exit()
         logging.info(
             f'SMTPServerThread received command from {self._connection.getpeername()}: {raw_command}'
         )
@@ -237,6 +241,13 @@ class SMTPServerThread(threading.Thread):
             self._send_response(INVALID_COMMAND_MESSAGE)
             return False
 
+    def _exit(self):
+        logging.info(
+            f'POP3ServerThread closing connetion with {self._connection.getpeername()}'
+        )
+        self._connection.close()
+        sys.exit()
+
     def run(self):
         self._send_response(f'220 {self._server.domain} Demo SMTP Server\r\n')
         for func in (self._helo, self._mail_from, self._rcpt_to, self._data,
@@ -253,7 +264,4 @@ class SMTPServerThread(threading.Thread):
             client.send(self._mail_content)
             client.close()
 
-        logging.info(
-            f'POP3ServerThread closing connetion with {self._connection.getpeername()}'
-        )
-        self._connection.close()
+        self._exit()

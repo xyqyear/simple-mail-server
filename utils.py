@@ -20,5 +20,5 @@ def recv_response(s: socket.socket, ends_with='\r\n') -> str:
             data += raw_data
             if data.endswith(ends_with.encode()):
                 return data.decode().strip()
-        except TimeoutError:
+        except Exception:
             return ''
