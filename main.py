@@ -12,7 +12,8 @@ logging.getLogger().setLevel(logging.INFO)
 
 def main():
     smtp_server = SMTPServer(config.domain, config.username, config.password)
-    pop3_server = POP3Server(config.username, config.password)
+    pop3_server = POP3Server(f'{config.username}@{config.domain}',
+                             config.password)
 
     smtp_server_main_thread = threading.Thread(target=smtp_server.run)
     pop3_server_main_thread = threading.Thread(target=pop3_server.run)
