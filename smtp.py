@@ -163,12 +163,13 @@ class SMTPServerThread(threading.Thread):
         self._mail_content: str
 
         self._connection.settimeout(10)
+        # for logging purpose
+        self._peer_name = self._connection.getpeername()
 
     def _send_response(self, content: str):
         self._connection.sendall(f'{content}\r\n'.encode())
         logging.info(
-            f'SMTPServerThread sent response to {self._connection.getpeername()}: {content}'
-        )
+            f'SMTPServerThread sent response to {self._peer_name}: {content}')
 
     def _recv_response(self, ends_with='\r\n') -> str:
         try:
@@ -180,7 +181,7 @@ class SMTPServerThread(threading.Thread):
     def _recv_command(self, ends_with='\r\n') -> SMTPCommand:
         raw_command = self._recv_response(ends_with)
         logging.info(
-            f'SMTPServerThread received command from {self._connection.getpeername()}: {raw_command}'
+            f'SMTPServerThread received command from {self._peer_name}: {raw_command}'
         )
         return SMTPCommand.from_str(raw_command)
 
@@ -259,8 +260,7 @@ class SMTPServerThread(threading.Thread):
     def _actual_data(self) -> bool:
         data = self._recv_response('\r\n.\r\n')
         logging.info(
-            f'SMTPServerThread received data from {self._connection.getpeername()}: {data}'
-        )
+            f'SMTPServerThread received data from {self._peer_name}: {data}')
         self._send_response(OK_MESSAGE)
         self._mail_content = data
         return True
@@ -291,8 +291,7 @@ class SMTPServerThread(threading.Thread):
                 db.release()
 
         logging.info(
-            f'POP3ServerThread closing connetion with {self._connection.getpeername()}'
-        )
+            f'POP3ServerThread closing connetion with {self._peer_name}')
         self._connection.close()
         sys.exit()
 

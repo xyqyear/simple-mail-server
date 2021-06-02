@@ -87,6 +87,9 @@ class POP3ServerThread(threading.Thread):
 
         self._got_username = False
 
+        # for logging
+        self._peer_name = self._connection.getpeername()
+
     def _dispatch(self, command: POP3Command) -> Union[bool, None]:
         if command.command in self._dispatcher and \
            self._state in self._command_state[command.command]:
@@ -98,7 +101,7 @@ class POP3ServerThread(threading.Thread):
         try:
             data = recv_response(self._connection)
             logging.info(
-                f'POP3ServerThread received command from {self._connection.getpeername()}: {data}'
+                f'POP3ServerThread received command from {self._peer_name}: {data}'
             )
             return POP3Command.from_str(data)
         except Exception:
@@ -203,8 +206,7 @@ class POP3ServerThread(threading.Thread):
         response = f'{"+OK" if success else "-ERR"}{" " + message if message else ""}\r\n'
         self._connection.sendall(response.encode())
         logging.info(
-            f'POP3ServerThread sent response to {self._connection.getpeername()}: {response}'
-        )
+            f'POP3ServerThread sent response to {self._peer_name}: {response}')
 
     def _send_ok(self, message: str = ''):
         self._send_response(True, message)
@@ -216,8 +218,7 @@ class POP3ServerThread(threading.Thread):
         if self._state == POP3State.TRANSACTION:
             db.release()
         logging.info(
-            f'POP3ServerThread closing connetion with {self._connection.getpeername()}'
-        )
+            f'POP3ServerThread closing connetion with {self._peer_name}')
         self._connection.close()
         sys.exit()
 
