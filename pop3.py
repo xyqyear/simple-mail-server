@@ -179,7 +179,7 @@ class POP3ServerThread(threading.Thread):
         response = f'{"+OK" if success else "-ERR"}{" " + message if message else ""}\r\n'
         self._connection.sendall(response.encode())
         logging.info(
-            f'SMTPServerThread sent response to {self._connection.getpeername()}: {response}'
+            f'POP3ServerThread sent response to {self._connection.getpeername()}: {response}'
         )
 
     def _send_ok(self, message: str = ''):
