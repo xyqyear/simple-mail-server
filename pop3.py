@@ -81,7 +81,7 @@ class POP3ServerThread(threading.Thread):
 
         self._username = ''
 
-    def _dispatch(self, command: POP3Command) -> Union(bool, None):
+    def _dispatch(self, command: POP3Command) -> Union[bool, None]:
         if command.command in self._dispatcher and \
            self._state in self._command_state[command.command]:
             return self._dispatcher[command.command](command.args)
@@ -92,7 +92,7 @@ class POP3ServerThread(threading.Thread):
         data = recv_response(self._connection)
         return POP3Command.from_str(data)
 
-    def _quit(self, args: Tuple[str]) -> Union(bool, None):
+    def _quit(self, args: Tuple[str]) -> Union[bool, None]:
         if self._state == POP3State.AUTHORIZATION:
             self._send_ok()
         else:
@@ -100,14 +100,14 @@ class POP3ServerThread(threading.Thread):
             db.release()
             return True
 
-    def _user(self, args: Tuple[str]) -> Union(bool, None):
+    def _user(self, args: Tuple[str]) -> Union[bool, None]:
         if len(args) != 1:
             self._send_err()
         else:
             self._username = args[0]
             self._send_ok()
 
-    def _pass(self, args: Tuple[str]) -> Union(bool, None):
+    def _pass(self, args: Tuple[str]) -> Union[bool, None]:
         if len(args) == 1 and \
            self._username and \
            self._username == self._server.username and \
@@ -118,11 +118,11 @@ class POP3ServerThread(threading.Thread):
         else:
             self._send_err()
 
-    def _stat(self, args: Tuple[str]) -> Union(bool, None):
+    def _stat(self, args: Tuple[str]) -> Union[bool, None]:
         message_num, message_length = db.get_stat()
         self._send_ok(f'{message_num} {message_length}')
 
-    def _list(self, args: Tuple[str]) -> Union(bool, None):
+    def _list(self, args: Tuple[str]) -> Union[bool, None]:
         if len(args) == 0:
             message_length_list = db.get_message_length_list()
             response = f'{len(message_length_list)} messages\r\n'
@@ -142,7 +142,7 @@ class POP3ServerThread(threading.Thread):
         else:
             self._send_err()
 
-    def _retr(self, args: Tuple[str]) -> Union(bool, None):
+    def _retr(self, args: Tuple[str]) -> Union[bool, None]:
         if len(args) == 1:
             try:
                 message = db.get_message_with_id(int(args[0]))
@@ -152,7 +152,7 @@ class POP3ServerThread(threading.Thread):
         else:
             self._send_err()
 
-    def _dele(self, args: Tuple[str]) -> Union(bool, None):
+    def _dele(self, args: Tuple[str]) -> Union[bool, None]:
         if len(args) == 1:
             try:
                 db.delete_message_with_id(int(args[0]))
@@ -162,10 +162,10 @@ class POP3ServerThread(threading.Thread):
         else:
             self._send_err()
 
-    def _noop(self, args: Tuple[str]) -> Union(bool, None):
+    def _noop(self, args: Tuple[str]) -> Union[bool, None]:
         self._send_ok()
 
-    def _rset(self, args: Tuple[str]) -> Union(bool, None):
+    def _rset(self, args: Tuple[str]) -> Union[bool, None]:
         db.reset_messages()
         self._send_ok()
 
