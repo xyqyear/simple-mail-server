@@ -68,35 +68,45 @@ class POP3ServerThread(threading.Thread):
             'RSET': self._rset
         }
 
+    def _dispatch(self, command: POP3Command) -> bool:
+        """
+        return value is to determin if terminate the loop or not.
+        """
+        if command.command in self._dispatcher:
+            return self._dispatcher[command.command](command.args)
+        else:
+            self._send_err()
+            return False
+
     def _recv_command(self) -> POP3Command:
         data = recv_response(self._connection)
         return POP3Command.from_str(data)
 
-    def _quit(self, args: Tuple(int)):
+    def _quit(self, args: Tuple[int]) -> bool:
         pass
 
-    def _user(self, args: Tuple(int)):
+    def _user(self, args: Tuple[int]) -> bool:
         pass
 
-    def _pass(self, args: Tuple(int)):
+    def _pass(self, args: Tuple[int]) -> bool:
         pass
 
-    def _stat(self, args: Tuple(int)):
+    def _stat(self, args: Tuple[int]) -> bool:
         pass
 
-    def _list(self, args: Tuple(int)):
+    def _list(self, args: Tuple[int]) -> bool:
         pass
 
-    def _retr(self, args: Tuple(int)):
+    def _retr(self, args: Tuple[int]) -> bool:
         pass
 
-    def _dele(self, args: Tuple(int)):
+    def _dele(self, args: Tuple[int]) -> bool:
         pass
 
-    def _noop(self, args: Tuple(int)):
+    def _noop(self, args: Tuple[int]) -> bool:
         pass
 
-    def _rset(self, args: Tuple(int)):
+    def _rset(self, args: Tuple[int]) -> bool:
         pass
 
     def _send_response(self, success: bool, message: str = ''):
@@ -111,9 +121,6 @@ class POP3ServerThread(threading.Thread):
         self._send_response(False, message)
 
     def run(self):
-        while True:
+        command = self._recv_command()
+        while self._dispatch(command):
             command = self._recv_command()
-            if command.command in self.dispatcher:
-                self.dispatcher[command.command](command.args)
-            else:
-                self._send_err()
