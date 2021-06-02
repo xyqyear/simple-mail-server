@@ -99,7 +99,19 @@ class POP3ServerThread(threading.Thread):
     def _rset(self, args: Tuple(int)):
         pass
 
+    def _send_response(self, success: bool, message: str = ''):
+        self.connection.sendall(f'{"+OK" if success else "-ERR"}{" " + message if message else ""}\r\n')
+
+    def _send_ok(self, message: str = ''):
+        self._send_response(True, message)
+
+    def _send_err(self, message: str = ''):
+        self._send_response(False, message)
+
     def run(self):
         while True:
             command = self._recv_command()
-            self.dispatcher[command.command](command.args)
+            if command.command in self.dispatcher:
+                self.dispatcher[command.command](command.args)
+            else:
+
