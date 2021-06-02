@@ -53,7 +53,7 @@ class SMTPSender:
         self._rcpt_to = rcpt_to
 
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._socket.settimeout(30)
+        self._socket.settimeout(10)
 
     def _send_command(self, command: str):
         self._socket.sendall(command.encode())
@@ -61,20 +61,21 @@ class SMTPSender:
             f'SMTPSender sent from {self._mail_from} to {self._rcpt_to}: {command}'
         )
 
-    def _recv_response(self, ends_with: str = '\r\n') -> SMTPResponse:
+    def _recv_response(self, ends_with: str = '\r\n') -> str:
         data = recv_response(self._socket, ends_with)
         logging.info(f'SMTPSender received data from {self._rcpt_to}: {data}')
-        if data:
-            return SMTPResponse.from_str(data)
-        else:
-            return None
+        return data
 
     def _check_response(self, raise_message: str, ends_with: str = '\r\n'):
         """
         check if the response of the server is positive.
         otherwise raise an Exception.
         """
-        response = self._recv_response(ends_with)
+        try:
+            response = SMTPResponse.from_str(self._recv_response(ends_with))
+        except Exception as e:
+            raise Exception(f'{raise_message}: {e}')
+
         if not response.success:
             raise Exception(f'{raise_message}: {response.raw_response}')
 
@@ -161,7 +162,7 @@ class SMTPServerThread(threading.Thread):
         self._rcpt_to: str
         self._mail_content: str
 
-        self._connection.settimeout(30)
+        self._connection.settimeout(10)
 
     def _send_response(self, content: str):
         self._connection.sendall(f'{content}\r\n'.encode())
@@ -170,11 +171,11 @@ class SMTPServerThread(threading.Thread):
         )
 
     def _recv_response(self, ends_with='\r\n') -> str:
-        response = recv_response(self._connection, ends_with)
-        if not response:
-            self._exit()
-        else:
+        try:
+            response = recv_response(self._connection, ends_with)
             return response
+        except Exception:
+            self._exit()
 
     def _recv_command(self, ends_with='\r\n') -> SMTPCommand:
         raw_command = self._recv_response(ends_with)
@@ -274,6 +275,17 @@ class SMTPServerThread(threading.Thread):
             return False
 
     def _exit(self):
+        if self._mail_content:
+            if self._as_submission_server:
+                client = SMTPSender(self._server.address, self._rcpt_to)
+                client.connect()
+                client.send(self._mail_content)
+                client.close()
+            else:
+                db.aquire()
+                db.insert_message(self._mail_content)
+                db.release()
+
         logging.info(
             f'POP3ServerThread closing connetion with {self._connection.getpeername()}'
         )
@@ -285,15 +297,5 @@ class SMTPServerThread(threading.Thread):
         for func in (self._helo, self._mail_from, self._rcpt_to, self._data,
                      self._actual_data, self._quit):
             self._process_command(func)
-
-        if self._as_submission_server:
-            db.aquire()
-            db.insert_message(self._mail_content)
-            db.release()
-        else:
-            client = SMTPSender(self._server.address, self._rcpt_to)
-            client.connect()
-            client.send(self._mail_content)
-            client.close()
 
         self._exit()

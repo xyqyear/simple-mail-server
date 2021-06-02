@@ -57,7 +57,7 @@ class POP3ServerThread(threading.Thread):
         self._server = server
         self._state = POP3State.AUTHORIZATION
 
-        self._connection.settimeout(30)
+        self._connection.settimeout(10)
 
         self._dispatcher = {
             'QUIT': self._quit,
@@ -93,13 +93,14 @@ class POP3ServerThread(threading.Thread):
             self._send_err()
 
     def _recv_command(self) -> POP3Command:
-        data = recv_response(self._connection)
-        if not data:
+        try:
+            data = recv_response(self._connection)
+            logging.info(
+                f'POP3ServerThread received command from {self._connection.getpeername()}: {data}'
+            )
+            return POP3Command.from_str(data)
+        except Exception:
             self._exit()
-        logging.info(
-            f'POP3ServerThread received command from {self._connection.getpeername()}: {data}'
-        )
-        return POP3Command.from_str(data)
 
     def _quit(self, args: Tuple[str]) -> Union[bool, None]:
         self._send_ok()
