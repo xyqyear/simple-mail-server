@@ -169,10 +169,15 @@ class SMTPServerThread(threading.Thread):
             f'SMTPServerThread sent response to {self._connection.getpeername()}: {content}'
         )
 
-    def _recv_command(self, ends_with='\r\n') -> SMTPCommand:
-        raw_command = recv_response(self._connection, ends_with)
-        if not raw_command:
+    def _recv_response(self, ends_with='\r\n') -> str:
+        response = recv_response(self._connection, ends_with)
+        if not response:
             self._exit()
+        else:
+            return response
+
+    def _recv_command(self, ends_with='\r\n') -> SMTPCommand:
+        raw_command = self._recv_response(ends_with)
         logging.info(
             f'SMTPServerThread received command from {self._connection.getpeername()}: {raw_command}'
         )
@@ -197,10 +202,10 @@ class SMTPServerThread(threading.Thread):
     def _auth(self):
         # Username:
         self._send_response(f'334 VXNlcm5hbWU6')
-        username_base64 = self.recv_response(self._connection)
+        username_base64 = self._recv_response(self._connection)
         # Password:
         self._send_response(f'334 UGFzc3dvcmQ6')
-        password_base64 = self.recv_response(self._connection)
+        password_base64 = self._recv_response(self._connection)
 
         if base64.b64encode(self._server.address.encode()).decode() == username_base64 and \
            base64.b64encode(self._server.password.encode()).decode() == password_base64:
@@ -251,7 +256,7 @@ class SMTPServerThread(threading.Thread):
             return False
 
     def _actual_data(self) -> bool:
-        data = recv_response(self._connection, '\r\n.\r\n')
+        data = self._recv_response('\r\n.\r\n')
         logging.info(
             f'SMTPServerThread received data from {self._connection.getpeername()}: {data}'
         )
