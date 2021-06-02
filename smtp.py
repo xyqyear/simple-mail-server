@@ -183,17 +183,14 @@ class SMTPServerThread(threading.Thread):
 
     def _helo(self) -> bool:
         c = self._recv_command()
-        if c.command == 'HELO':
+        if c.command in ('HELO', 'EHLO'):
             if not c.argument:
                 self._send_response(SYNTAX_ERROR_MESSAGE)
                 return False
             self._send_response(OK_MESSAGE)
             return True
         else:
-            if c.command == 'EHLO':
-                self._send_response("502 EHLO Not Supported\r\n")
-            else:
-                self._send_response(INVALID_COMMAND_MESSAGE)
+            self._send_response(INVALID_COMMAND_MESSAGE)
             return False
 
     def _mail_from(self) -> bool:
