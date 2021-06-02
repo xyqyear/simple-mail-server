@@ -119,10 +119,24 @@ class POP3ServerThread(threading.Thread):
             self._send_err()
 
     def _stat(self, args: Tuple[str]) -> Union(bool, None):
-        pass
+        message_num, message_length = db.get_stat()
+        self._send_ok(f'{message_num} {message_length}')
 
     def _list(self, args: Tuple[str]) -> Union(bool, None):
-        pass
+        if len(args) == 0:
+            message_length_list = db.get_message_length_list()
+            response = f'{len(message_length_list)} messages\r\n'
+            for i, length in enumerate(message_length_list):
+                response += f'{i+1} {length} \r\n'
+            response += '.'
+
+            self._send_ok(response)
+        elif len(args) == 1:
+            try:
+                message_length = db.get_message_length_with_id(int(args[0]))
+                self._send_ok(f'{args[0]} {message_length}')
+            except Exception as e:
+                self._send_err(str(e))
 
     def _retr(self, args: Tuple[str]) -> Union(bool, None):
         pass

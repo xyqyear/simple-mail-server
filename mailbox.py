@@ -23,7 +23,7 @@ class MailboxDB:
         self.db.execute(sql, args)
         self.db.commit()
 
-    def get_message_num_bytes(self) -> Tuple[int]:
+    def get_stat(self) -> Tuple[int]:
         raw_count = self._db_query("select count(*) from message")
         if raw_count[0][0]:
             return (raw_count[0][0],
@@ -43,7 +43,7 @@ class MailboxDB:
         else:
             raise Exception("no such message")
 
-    def get_message_list(self) -> Tuple[Tuple[int]]:
+    def get_message_length_list(self) -> Tuple[Tuple[int]]:
         return tuple(
             map(
                 lambda i: i[:2],
@@ -53,7 +53,7 @@ class MailboxDB:
                         "select row_number() over (order by recv_date desc) as row_num, length(content), del from message"
                     ))))
 
-    def get_message_bytes_with_id(self, msg_id: int) -> int:
+    def get_message_length_with_id(self, msg_id: int) -> int:
         return len(self.get_message_with_id(msg_id))
 
     def delete_message_with_id(self, msg_id: int):
