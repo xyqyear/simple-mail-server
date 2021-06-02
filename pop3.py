@@ -112,7 +112,7 @@ class POP3ServerThread(threading.Thread):
     def _send_response(self, success: bool, message: str = ''):
         self._connection.sendall(
             f'{"+OK" if success else "-ERR"}{" " + message if message else ""}\r\n'
-        )
+            .encode())
 
     def _send_ok(self, message: str = ''):
         self._send_response(True, message)
