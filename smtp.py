@@ -137,7 +137,7 @@ class SMTPServer:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(('0.0.0.0', 25))
         s.listen()
-        logging(f'SMTPServer is now running')
+        logging.info(f'SMTPServer is now running')
         while True:
             conn, address = s.accept()
             logging.info(f'SMTPServer accepted new connection from {address}')
@@ -254,6 +254,6 @@ class SMTPServerThread(threading.Thread):
             client.close()
 
         logging.info(
-            f'POP3ServerThread closing connetion with {self._connection.getpeername}'
+            f'POP3ServerThread closing connetion with {self._connection.getpeername()}'
         )
         self._connection.close()

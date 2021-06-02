@@ -41,7 +41,7 @@ class POP3Server:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(('0.0.0.0', 110))
         s.listen()
-        logging(f'POP3Server is now running')
+        logging.info(f'POP3Server is now running')
         while True:
             conn, address = s.accept()
             logging.info(f'POP3Server accepted new connection from {address}')
@@ -82,7 +82,7 @@ class POP3ServerThread(threading.Thread):
             'RSET': (POP3State.TRANSACTION, ),
         }
 
-        self._username = ''
+        self._got_username = False
 
     def _dispatch(self, command: POP3Command) -> Union[bool, None]:
         if command.command in self._dispatcher and \
@@ -104,16 +104,16 @@ class POP3ServerThread(threading.Thread):
         return True
 
     def _user(self, args: Tuple[str]) -> Union[bool, None]:
-        if len(args) != 1:
-            self._send_err()
-        else:
-            self._username = args[0]
+        if len(args) == 1 and args[0] == self._server.username:
+            self._got_username = True
             self._send_ok()
+        else:
+            self._got_username = False
+            self._send_err()
 
     def _pass(self, args: Tuple[str]) -> Union[bool, None]:
         if len(args) == 1 and \
-           self._username and \
-           self._username == self._server.username and \
+           self._got_username and \
            args[0] == self._server.password:
             self._send_ok()
             # ! where the state changes
@@ -194,6 +194,6 @@ class POP3ServerThread(threading.Thread):
             command = self._recv_command()
 
         logging.info(
-            f'POP3ServerThread closing connetion with {self._connection.getpeername}'
+            f'POP3ServerThread closing connetion with {self._connection.getpeername()}'
         )
         self._connection.close()
