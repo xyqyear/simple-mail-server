@@ -10,30 +10,30 @@ class MailboxDB:
         self.db = sqlite3.connect(db_path)
         self.lock = threading.Lock()
 
-        if not self.db_query(
+        if not self._db_query(
                 "select 1 from sqlite_master where name='message'"):
-            self.db_exec(
+            self._db_exec(
                 "create table message(id integer primary key, content varchar, recv_date timestamp, del boolean)"
             )
 
-    def db_query(self, sql: str, args: list = []) -> tuple:
+    def _db_query(self, sql: str, args: list = []) -> tuple:
         return self.db.execute(sql, args).fetchall()
 
-    def db_exec(self, sql: str, args: list = []):
+    def _db_exec(self, sql: str, args: list = []):
         self.db.execute(sql, args)
         self.db.commit()
 
     def get_message_num_bytes(self) -> Tuple[int]:
-        raw_count = self.db_query("select count(*) from message")
+        raw_count = self._db_query("select count(*) from message")
         if raw_count[0][0]:
             return (raw_count[0][0],
-                    self.db_query("select sum(length(content)) from message")
+                    self._db_query("select sum(length(content)) from message")
                     [0][0])
         else:
             return (0, 0)
 
     def get_message_with_id(self, msg_id: int) -> str:
-        query_result = self.db_query(
+        query_result = self._db_query(
             "select content, del from (select row_number() over (order by recv_date desc) as row_num, content, del from message) where row_num=?",
             [msg_id])
         if query_result:
@@ -49,7 +49,7 @@ class MailboxDB:
                 lambda i: i[:2],
                 filter(
                     lambda i: not i[2],
-                    self.db_query(
+                    self._db_query(
                         "select row_number() over (order by recv_date desc) as row_num, length(content), del from message"
                     ))))
 
@@ -60,25 +60,25 @@ class MailboxDB:
         # check if the msg exists
         self.get_message_with_id(msg_id)
 
-        self.db_exec(
+        self._db_exec(
             "update message set del=1 where id in (select id from (select row_number() over (order by recv_date desc) as row_num, id from message) where row_num=?)",
             [msg_id])
 
     def reset_messages(self):
-        self.db_exec("update message set del=0 where del=1")
+        self._db_exec("update message set del=0 where del=1")
 
     def insert_message(self, msg: str):
-        self.db_exec("insert into message values(null, ?, ?, 0)",
-                     [msg, datetime.datetime.now()])
+        self._db_exec("insert into message values(null, ?, ?, 0)",
+                      [msg, datetime.datetime.now()])
 
-    def perform_deletion(self):
-        self.db_exec("delete from message where del=1")
+    def _perform_deletion(self):
+        self._db_exec("delete from message where del=1")
 
     def aquire(self):
         self.lock.acquire()
 
     def release(self):
-        self.perform_deletion()
+        self._perform_deletion()
         self.lock.release()
 
 
