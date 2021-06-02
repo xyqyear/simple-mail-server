@@ -1,6 +1,7 @@
 import threading
 import logging
 import socket
+import base64
 import sys
 import re
 
@@ -127,7 +128,7 @@ class SMTPSender:
 
 
 class SMTPServer:
-    def __init__(self, domain, username, password):
+    def __init__(self, domain: str, username: str, password: str):
         self.domain = domain
         self.username = username
         self.password = password
@@ -145,9 +146,9 @@ class SMTPServer:
             thread.start()
 
 
-INVALID_COMMAND_MESSAGE = "550 Invalid command in current state.\r\n"
-SYNTAX_ERROR_MESSAGE = "501 Syntax error in coomand or arguments.\r\n"
-OK_MESSAGE = "250 OK.\r\n"
+INVALID_COMMAND_MESSAGE = "550 Invalid command in current state."
+SYNTAX_ERROR_MESSAGE = "501 Syntax error in coomand or arguments."
+OK_MESSAGE = "250 OK."
 
 
 class SMTPServerThread(threading.Thread):
@@ -156,14 +157,14 @@ class SMTPServerThread(threading.Thread):
         self._connection = connection
         self._server = server
 
+        self._as_submission_server = False
         self._rcpt_to: str
-        self._relay: bool
         self._mail_content: str
 
         self._connection.settimeout(30)
 
     def _send_response(self, content: str):
-        self._connection.sendall(content.encode())
+        self._connection.sendall(f'{content}\r\n'.encode())
         logging.info(
             f'SMTPServerThread sent response to {self._connection.getpeername()}: {content}'
         )
@@ -187,16 +188,38 @@ class SMTPServerThread(threading.Thread):
             if not c.argument:
                 self._send_response(SYNTAX_ERROR_MESSAGE)
                 return False
-            self._send_response(OK_MESSAGE)
+            self._send_response('250-AUTH LOGIN\r\n250 OK.')
             return True
         else:
             self._send_response(INVALID_COMMAND_MESSAGE)
             return False
 
+    def _auth(self):
+        # Username:
+        self._send_response(f'334 VXNlcm5hbWU6')
+        username_base64 = self.recv_response(self._connection)
+        # Password:
+        self._send_response(f'334 UGFzc3dvcmQ6')
+        password_base64 = self.recv_response(self._connection)
+
+        if base64.b64encode(self._server.address.encode()).decode() == username_base64 and \
+           base64.b64encode(self._server.password.encode()).decode() == password_base64:
+            self._as_submission_server = True
+            self._send_response(OK_MESSAGE)
+        else:
+            self._send_response('535 Login Fail.')
+            self._exit()
+
     def _mail_from(self) -> bool:
+        """
+        the client may send auth login before mail from
+        this means the client is using this server as a mail submission server
+        """
         c = self._recv_command()
 
-        if c.command == 'MAIL':
+        if c.raw_command.upper() == 'AUTH LOGIN':
+            self._auth()
+        elif c.command == 'MAIL':
             self._send_response(OK_MESSAGE)
             return True
         else:
@@ -217,8 +240,12 @@ class SMTPServerThread(threading.Thread):
     def _data(self) -> bool:
         c = self._recv_command()
         if c.command == 'DATA':
-            self._send_response("354 End with <CRLF>.<CRLF>.\r\n")
-            return True
+            if not self._as_submission_server and self._rcpt_to != self._server.address:
+                self._send_response("550 This is not an open relay server.")
+                self._exit()
+            else:
+                self._send_response("354 End with <CRLF>.<CRLF>.")
+                return True
         else:
             self._send_response(INVALID_COMMAND_MESSAGE)
             return False
@@ -235,7 +262,7 @@ class SMTPServerThread(threading.Thread):
     def _quit(self) -> bool:
         c = self._recv_command()
         if c.command == 'QUIT':
-            self._send_response("221 Bye.\r\n")
+            self._send_response("221 Bye.")
             return True
         else:
             self._send_response(INVALID_COMMAND_MESSAGE)
@@ -249,12 +276,12 @@ class SMTPServerThread(threading.Thread):
         sys.exit()
 
     def run(self):
-        self._send_response(f'220 {self._server.domain} Demo SMTP Server\r\n')
+        self._send_response(f'220 {self._server.domain} Demo SMTP Server')
         for func in (self._helo, self._mail_from, self._rcpt_to, self._data,
                      self._actual_data, self._quit):
             self._process_command(func)
 
-        if self._rcpt_to == self._server.address:
+        if self._as_submission_server:
             db.aquire()
             db.insert_message(self._mail_content)
             db.release()
