@@ -182,7 +182,7 @@ class POP3ServerThread(threading.Thread):
 
     def _top(self, args: Tuple[str]) -> Union[bool, None]:
         if len(args) == 2 and args[0].isdecimal() and args[1].isdecimal():
-            response = f'+OK\r\n'
+            response = '\r\n'
 
             msg_id = int(args[0])
             line_num = int(args[1])
@@ -196,7 +196,7 @@ class POP3ServerThread(threading.Thread):
                 response += '\r\n'.join(message.split('\r\n')[:line_num])
 
             response += '.'
-            self._send_response(response)
+            self._send_ok(response)
 
         else:
             self._send_err()
