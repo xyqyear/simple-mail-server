@@ -210,9 +210,9 @@ class SMTPServerThread(threading.Thread):
         if base64.b64encode(self._server.address.encode()).decode() == username_base64 and \
            base64.b64encode(self._server.password.encode()).decode() == password_base64:
             self._as_submission_server = True
-            self._send_response(OK_MESSAGE)
+            self._send_response('235 Login successful.')
         else:
-            self._send_response('535 Login Fail.')
+            self._send_response('535 Login fail.')
             self._exit()
 
     def _mail_from(self) -> bool:
