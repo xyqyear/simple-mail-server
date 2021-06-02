@@ -69,14 +69,14 @@ class POP3ServerThread(threading.Thread):
 
         self._command_state = {
             'QUIT': (POP3State.AUTHORIZATION, POP3State.TRANSACTION),
-            'USER': (POP3State.AUTHORIZATION),
-            'PASS': (POP3State.AUTHORIZATION),
-            'STAT': (POP3State.TRANSACTION),
-            'LIST': (POP3State.TRANSACTION),
-            'RETR': (POP3State.TRANSACTION),
-            'DELE': (POP3State.TRANSACTION),
-            'NOOP': (POP3State.TRANSACTION),
-            'RSET': (POP3State.TRANSACTION),
+            'USER': (POP3State.AUTHORIZATION, ),
+            'PASS': (POP3State.AUTHORIZATION, ),
+            'STAT': (POP3State.TRANSACTION, ),
+            'LIST': (POP3State.TRANSACTION, ),
+            'RETR': (POP3State.TRANSACTION, ),
+            'DELE': (POP3State.TRANSACTION, ),
+            'NOOP': (POP3State.TRANSACTION, ),
+            'RSET': (POP3State.TRANSACTION, ),
         }
 
         self._username = ''
