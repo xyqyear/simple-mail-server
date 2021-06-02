@@ -50,13 +50,13 @@ class POP3Server:
 class POP3ServerThread(threading.Thread):
     def __init__(self, connection: socket.socket, server: POP3Server):
         super().__init__()
-        self.connection = connection
-        self.server = server
-        self.state = POP3State.AUTHORIZATION
+        self._connection = connection
+        self._server = server
+        self._state = POP3State.AUTHORIZATION
 
         db.aquire()
 
-        self.dispatcher = {
+        self._dispatcher = {
             'QUIT': self._quit,
             'USER': self._user,
             'PASS': self._pass,
@@ -69,7 +69,7 @@ class POP3ServerThread(threading.Thread):
         }
 
     def _recv_command(self) -> POP3Command:
-        data = recv_response(self.connection)
+        data = recv_response(self._connection)
         return POP3Command.from_str(data)
 
     def _quit(self, args: Tuple(int)):
@@ -100,7 +100,9 @@ class POP3ServerThread(threading.Thread):
         pass
 
     def _send_response(self, success: bool, message: str = ''):
-        self.connection.sendall(f'{"+OK" if success else "-ERR"}{" " + message if message else ""}\r\n')
+        self._connection.sendall(
+            f'{"+OK" if success else "-ERR"}{" " + message if message else ""}\r\n'
+        )
 
     def _send_ok(self, message: str = ''):
         self._send_response(True, message)
@@ -114,4 +116,4 @@ class POP3ServerThread(threading.Thread):
             if command.command in self.dispatcher:
                 self.dispatcher[command.command](command.args)
             else:
-
+                self._send_err()
