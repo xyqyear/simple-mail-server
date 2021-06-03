@@ -70,6 +70,7 @@ class POP3ServerThread(threading.Thread):
             'NOOP': self._noop,
             'RSET': self._rset,
             'TOP': self._top,
+            'UIDL': self._uidl,
         }
 
         self._command_state = {
@@ -83,6 +84,7 @@ class POP3ServerThread(threading.Thread):
             'NOOP': (POP3State.TRANSACTION, ),
             'RSET': (POP3State.TRANSACTION, ),
             'TOP': (POP3State.TRANSACTION, ),
+            'UIDL': (POP3State.TRANSACTION, ),
         }
 
         self._got_username = False
@@ -198,6 +200,26 @@ class POP3ServerThread(threading.Thread):
 
             response += '\r\n.'
             self._send_ok(response)
+
+        else:
+            self._send_err()
+
+    def _uidl(self, args: Tuple[str]) -> Union[bool, None]:
+        if len(args) == 0:
+            message_uid_list = db.get_message_uid_list()
+            response = '\r\n'
+            for i, uid in message_uid_list:
+                response += f'{i} {uid}\r\n'
+            response += '.'
+
+            self._send_ok(response)
+
+        elif len(args) == 1:
+            try:
+                message_uid = db.get_message_uid_with_id(int(args[0]))
+                self._send_ok(f'{args[0]} {message_uid}')
+            except Exception as e:
+                self._send_err(str(e))
 
         else:
             self._send_err()
