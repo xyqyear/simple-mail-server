@@ -86,13 +86,13 @@ class SMTPSender:
         hostname = self._rcpt_to.split('@')[1]
         if re.match(r'^\[\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\]$', hostname):
             self._socket.connect((hostname[1:][:-1], 25))
-            logging.log(0, f'connecting to {hostname}')
+            logging.info(f'connecting to {hostname}')
         else:
             hostname = get_mx(hostname)
             if not hostname:
                 raise Exception('MX Record not found.')
             self._socket.connect((hostname, 25))
-            logging.log(0, f'connecting to {hostname}')
+            logging.info(f'connecting to {hostname}')
 
         # receive initial server message
         self._check_response('Invalid response from server while connecting.')
