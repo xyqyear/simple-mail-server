@@ -291,7 +291,7 @@ class SMTPServerThread(threading.Thread):
                 db.release()
 
         logging.info(
-            f'POP3ServerThread closing connetion with {self._peer_name}')
+            f'SMTPServerThread closing connetion with {self._peer_name}')
         self._connection.close()
         sys.exit()
 
